@@ -32,7 +32,7 @@ class CreateKata(CreateOCPResourceOperations):
         timeout = int(environment_variables.environment_variables_dict['timeout'])
         current_wait_time = 0
         while timeout <= 0 or current_wait_time < timeout:
-            self.__oc.create_async(yaml_file)
+            self.__oc.create_async(yaml_file, is_check=False)
             # We cannot wait for a condition here, because the
             # create_async may simply not work even if it returns success.
             time.sleep(OC.SLEEP_TIME)

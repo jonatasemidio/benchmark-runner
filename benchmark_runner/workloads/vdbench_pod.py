@@ -108,7 +108,7 @@ class VdbenchPod(WorkloadsOperations):
                 self.__es_index = 'vdbench-results'
             self._environment_variables_dict['kind'] = self.__kind
             # create namespace
-            self._oc.create_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'namespace.yaml'))
+            self._oc.apply_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'namespace.yaml'))
             self._oc.apply_security_privileged()
             if self.__kind == 'kata':
                 self._oc.set_kata_threads_pool(thread_pool_size=self._kata_thread_pool_size)

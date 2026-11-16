@@ -10,9 +10,22 @@ from benchmark_runner.common.oc.oc_exceptions import YAMLNotExist, LoginFailed, 
 @patch('benchmark_runner.common.oc.oc.SingletonOCLogin')  # patching login
 def test_create_async_pod_yaml_not_exist(mock_login):
     oc = OC(kubeadmin_password="dummy-password")
-    with patch("os.path.exists", return_value=False):
+    with patch("os.path.isfile", return_value=False):
         with pytest.raises(YAMLNotExist):
             oc.create_async(yaml='stressng1.yaml')
+
+
+@patch('benchmark_runner.common.oc.oc.SingletonOCLogin')
+def test_create_and_apply_async_check_exit_code_by_default(mock_login, tmp_path):
+    yaml_file = tmp_path / 'resource.yaml'
+    yaml_file.write_text('apiVersion: v1\nkind: Namespace\nmetadata:\n  name: test\n')
+    oc = OC(kubeadmin_password="dummy-password")
+    with patch.object(oc, 'run', return_value='created') as mock_run:
+        oc.create_async(yaml=str(yaml_file))
+        mock_run.assert_called_once_with(f'{oc._cli} create -f {yaml_file}', is_check=True)
+    with patch.object(oc, 'run', return_value='configured') as mock_run:
+        oc.apply_async(yaml=str(yaml_file))
+        mock_run.assert_called_once_with(f'{oc._cli} apply -f {yaml_file}', is_check=True)
 
 
 # Dummy UUID for testing

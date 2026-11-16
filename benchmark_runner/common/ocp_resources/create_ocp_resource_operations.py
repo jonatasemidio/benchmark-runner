@@ -58,7 +58,7 @@ class CreateOCPResourceOperations:
         current_wait_time = 0
         double_check = False
         while timeout <= 0 or current_wait_time <= timeout:
-            cmd = self.__oc.run(verify_cmd)
+            cmd = self.__oc.run(verify_cmd, is_check=False)
             # Count openshift-storage/ pv
             if count_openshift_storage:
                 if int(cmd) == self.__oc.get_num_active_nodes() * int(environment_variables.environment_variables_dict['num_odf_disk']):

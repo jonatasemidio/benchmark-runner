@@ -182,7 +182,7 @@ class LinstressVm(BootstormVM):
                     logger.info('Verification only: no VMs found')
                 return
 
-            self._oc.create_async(yaml=os.path.join(self._run_artifacts_path, 'namespace.yaml'))
+            self._oc.apply_async(yaml=os.path.join(self._run_artifacts_path, 'namespace.yaml'))
 
             if self._scale:
                 vm_count = self._scale * len(self._scale_node_list)

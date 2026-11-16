@@ -55,7 +55,7 @@ class UperfPod(WorkloadsOperations):
 
             self._environment_variables_dict['kind'] = self.__kind
 
-            self._oc.create_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'namespace.yaml'))
+            self._oc.apply_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'namespace.yaml'))
 
             logger.info("Creating uperf server job")
             self._oc.create_async(yaml=os.path.join(f'{self._run_artifacts_path}', f'{self.__name}_server.yaml'))

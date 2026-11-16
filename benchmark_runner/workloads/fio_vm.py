@@ -134,7 +134,7 @@ class FioVM(WorkloadsOperations):
             self.__vm_name = f'{self.__workload_name}-{self._trunc_uuid}'
             self.__kind = 'vm'
             self._environment_variables_dict['kind'] = 'vm'
-            self._oc.create_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'namespace.yaml'))
+            self._oc.apply_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'namespace.yaml'))
             self._oc.create_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'fio_configmap.yaml'))
             if not self._scale:
                 self._oc.create_vm_sync(yaml=os.path.join(f'{self._run_artifacts_path}', f'{self.__name}.yaml'), vm_name=self.__vm_name)

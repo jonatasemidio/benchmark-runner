@@ -114,7 +114,7 @@ class FioPod(WorkloadsOperations):
             else:
                 self.__es_index = 'fio-results'
             self._environment_variables_dict['kind'] = self.__kind
-            self._oc.create_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'namespace.yaml'))
+            self._oc.apply_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'namespace.yaml'))
             self._oc.create_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'fio_configmap.yaml'))
             if not self._scale:
                 self._oc.create_pod_sync(yaml=os.path.join(f'{self._run_artifacts_path}', f'{self.__name}.yaml'), pod_name=self.__pod_name)

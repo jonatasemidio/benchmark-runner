@@ -55,7 +55,7 @@ class StressngVM(WorkloadsOperations):
             self._environment_variables_dict['kind'] = self.__kind
 
             # Create namespace
-            self._oc.create_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'namespace.yaml'))
+            self._oc.apply_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'namespace.yaml'))
 
             # Create VirtualMachine (cloud-init will install and run stress-ng)
             logger.info("Creating stressng VirtualMachine")

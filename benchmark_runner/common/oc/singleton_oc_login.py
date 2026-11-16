@@ -49,8 +49,6 @@ class SingletonOCLogin:
                             f'{self._cli} auth whoami -ojsonpath=\'{{.status.userInfo.username}}{{"\\n"}}\'',
                             is_check=True,
                         )
-                        if isinstance(identity, bytes):
-                            identity = identity.decode('utf-8')
                         identity = identity.strip()
                     except Exception as error:
                         raise LoginFailed(

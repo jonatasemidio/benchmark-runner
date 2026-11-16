@@ -412,7 +412,7 @@ class BootstormVM(WorkloadsOperations):
         self._environment_variables_dict['kind'] = 'vm'
         if not self._verification_only:
             # create namespace
-            self._oc.create_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'namespace.yaml'))
+            self._oc.apply_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'namespace.yaml'))
 
     def run_vm_workload(self):
         # verification only w/o running or deleting any resource

@@ -50,11 +50,12 @@ class AnalyzePrometheusLogs:
 
     @staticmethod
     @typechecked
-    def run_container(image_name: str, command: str):
+    def run_container(image_name: str, command: str, is_check: bool = True):
         """
         This method runs the container and waits until it finishes running
         @param image_name:
         @param command:
+        @param is_check: check container exit code
         @return:
         """
         cmd = f"podman run --name {image_name} {command}"
@@ -74,6 +75,8 @@ class AnalyzePrometheusLogs:
 
         return_code = process.poll()
         logger.info(f"Container exited with return code {return_code}")
+        if is_check and return_code != 0:
+            raise subprocess.CalledProcessError(return_code if return_code is not None else -1, cmd)
         return return_code
 
     @staticmethod

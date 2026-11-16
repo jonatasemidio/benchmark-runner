@@ -149,7 +149,7 @@ class HammerdbPod(WorkloadsOperations):
             else:
                 self.__es_index = 'hammerdb-results'
 
-            self._oc.create_async(yaml=os.path.join(self._run_artifacts_path, 'namespace.yaml'))
+            self._oc.apply_async(yaml=os.path.join(self._run_artifacts_path, 'namespace.yaml'))
 
             if self.__database == 'mssql':
                 namespace = self._environment_variables_dict.get('namespace', 'benchmark-runner')

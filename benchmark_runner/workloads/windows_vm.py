@@ -28,7 +28,7 @@ class WindowsVM(BootstormVM):
         namespace = self._environment_variables_dict.get('namespace', 'benchmark-runner')
         current_wait_time = 0
         while current_wait_time <= timeout:
-            result = self._oc.run(f'oc get volumesnapshot {snapshot_name} -n {namespace} -o jsonpath="{{.status.readyToUse}}"')
+            result = self._oc.run(f'oc get volumesnapshot {snapshot_name} -n {namespace} -o jsonpath="{{.status.readyToUse}}"', is_check=False)
             if result and result.strip() == 'true':
                 logger.info(f'VolumeSnapshot {snapshot_name} is ready')
                 return True
@@ -50,7 +50,7 @@ class WindowsVM(BootstormVM):
             self._initialize_run()
             if not self._verification_only:
                 # create windows dv
-                self._oc.create_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'windows_dv.yaml'))
+                self._oc.apply_async(yaml=os.path.join(f'{self._run_artifacts_path}', 'windows_dv.yaml'))
                 self._oc.wait_for_dv_status(status='Succeeded')
                 # create snapshot if using ODF
                 if self._odf_pvc:

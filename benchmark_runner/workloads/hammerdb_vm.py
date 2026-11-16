@@ -161,7 +161,7 @@ class HammerdbVm(WorkloadsOperations):
             self._template.generate_yamls(scale=str(self._scale), scale_nodes=self._scale_node_list,
                                           thread_limit=self._threads_limit)
 
-            self._oc.create_async(yaml=os.path.join(self._run_artifacts_path, 'namespace.yaml'))
+            self._oc.apply_async(yaml=os.path.join(self._run_artifacts_path, 'namespace.yaml'))
             configmap_yaml = os.path.join(
                 self._run_artifacts_path,
                 f'hammerdb_{self._kind}_{self._database}_configmap.yaml'

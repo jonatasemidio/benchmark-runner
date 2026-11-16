@@ -27,7 +27,7 @@ class KrknHubWorkloads(WorkloadsOperations):
         This method deletes Krkn Hub resources
         :return:
         """
-        self.__ssh.run(cmd=f'podman rm -f {self.__krknhub_pod_name}')
+        self.__ssh.run(cmd=f'podman rm -f {self.__krknhub_pod_name}', is_check=False)
 
     def initialize_workload(self):
         """

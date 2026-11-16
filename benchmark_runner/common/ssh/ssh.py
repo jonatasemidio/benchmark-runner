@@ -13,29 +13,29 @@ class SSH:
         self.__environment_variables_dict = environment_variables.environment_variables_dict
         self.timeout = int(self.__environment_variables_dict.get('timeout', 300))
 
-    def run(self, cmd: str, is_check: bool = False, background: bool = False):
+    def run(self, cmd: str, is_check: bool = True, background: bool = False):
         """
         This method run shell commands
         :param background: run ssh in background
         :param cmd:
-        :param is_check:run check command
+        :param is_check: run check command
         :return:
         """
         try:
             if background:
-                output = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            elif is_check:
-                output = subprocess.check_output(
-                    cmd,
-                    stderr=subprocess.STDOUT,
-                    shell=True, timeout=self.timeout,
-                    universal_newlines=False)
-            # execute cmd
-            else:
-                output = subprocess.getoutput(cmd)
+                return subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = subprocess.run(
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+                timeout=self.timeout,
+            )
+            output = result.stdout.removesuffix('\n')
+            if is_check and result.returncode != 0:
+                logger.error(f'subprocess Status : FAIL: {result.returncode} {output}')
+                raise SSHSubprocessError()
             return output
-        except subprocess.CalledProcessError as err:
-            logger.error(f'subprocess Status : FAIL: {err.returncode} {err.output}')
-            raise SSHSubprocessError()
         except Exception as err:
-             raise err
+            raise err

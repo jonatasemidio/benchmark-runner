@@ -92,7 +92,7 @@ class OC(SSH):
         Returns the virtctl client version as a string.
         Uses 2>/dev/null to suppress server-unreachable errors from leaking into the output.
         """
-        return self.run('virtctl version 2>/dev/null | grep "Client Version" | sed -E \'s/.*GitVersion:"([^"]+)".*/\\1/\'').strip()
+        return self.run('virtctl version 2>/dev/null | grep "Client Version" | sed -E \'s/.*GitVersion:"([^"]+)".*/\\1/\'', is_check=False).strip()
 
     def is_virtctl_ge(self, min_version="1.6.0"):
         """
@@ -335,7 +335,7 @@ class OC(SSH):
         @param: node
         :return:
         """
-        kata_rpm_version = self.run(f"{self._cli} debug node/{node} -- chroot /host rpm -q --queryformat='%{{VERSION}}-%{{RELEASE}}' kata-containers 2>/dev/null")
+        kata_rpm_version = self.run(f"{self._cli} debug node/{node} -- chroot /host rpm -q --queryformat='%{{VERSION}}-%{{RELEASE}}' kata-containers 2>/dev/null", is_check=False)
         return '.'.join(kata_rpm_version.split('.')[:3])
 
     def _get_kata_default_channel(self):
@@ -412,7 +412,7 @@ class OC(SSH):
         """
         # Check specifically for kubevirt-hyperconverged operator, not just the first CSV alphabetically
         verify_cmd = f"{self._cli} get csv -n openshift-cnv -o jsonpath='{{.items[?(@.spec.displayName==\"OpenShift Virtualization\")].status.phase}}'"
-        if 'Succeeded' in self.run(verify_cmd):
+        if 'Succeeded' in self.run(verify_cmd, is_check=False):
             return True
         return False
 
@@ -422,7 +422,7 @@ class OC(SSH):
         :return:
         """
         verify_cmd = f"{self._cli} get csv -n openshift-storage -o jsonpath='{{.items[0].status.phase}}'"
-        if 'Succeeded' in self.run(verify_cmd):
+        if 'Succeeded' in self.run(verify_cmd, is_check=False):
             return True
         return False
 
@@ -435,7 +435,7 @@ class OC(SSH):
         """
         namespace = f'-n {namespace}' if namespace else ''
         verify_cmd = f"{self._cli} get dv {namespace} -o jsonpath='{{.items[].status.phase}}'"
-        if status in self.run(verify_cmd):
+        if status in self.run(verify_cmd, is_check=False):
             return True
         return False
 
@@ -493,7 +493,7 @@ class OC(SSH):
         health_check = f"{self._cli} -n {namespace} rsh {self._get_pod_name(pod_name=pod_name, namespace=namespace)} ceph health detail"
 
         while timeout <= 0 or current_wait_time <= timeout:
-            result = self.run(health_check).strip()
+            result = self.run(health_check, is_check=False).strip()
             if result.startswith('HEALTH_OK'):
                 return True
 
@@ -533,7 +533,8 @@ class OC(SSH):
             try:
                 # Run the command to get ODF disk count
                 disk_count_str = self.run(
-                    f"{self._cli} get --no-headers pod -n openshift-storage | grep osd | grep -cv prepare")
+                    f"{self._cli} get --no-headers pod -n openshift-storage | grep osd | grep -cv prepare",
+                    is_check=False)
                 disk_count = int(disk_count_str)
                 return disk_count
             except ValueError as e:
@@ -555,7 +556,7 @@ class OC(SSH):
         :return:
         """
         verify_cmd = f"{self._cli} get csv -n openshift-sandboxed-containers-operator -o jsonpath='{{.items[0].status.phase}}'"
-        if 'Succeeded' in self.run(verify_cmd):
+        if 'Succeeded' in self.run(verify_cmd, is_check=False):
             return True
         return False
 
@@ -593,7 +594,7 @@ class OC(SSH):
             logger.info(f"Waiting for '{nodes_status}' to reach 'Ready' status")
             time.sleep(wait_time)
             current_wait_time += wait_time
-        logger.info(f"oc get nodes:\n{self.run('oc get nodes')}")
+        logger.info(f"oc get nodes:\n{self.run('oc get nodes', is_check=False)}")
         if self._must_gather_log:
             self.generate_must_gather(run_artifacts_path=self._run_artifacts_path, cnv_version=self._cnv_version,
                                           odf_version=self._odf_version)
@@ -685,7 +686,7 @@ class OC(SSH):
 
     @typechecked
     @logger_time_stamp
-    def create_async(self, yaml: str, is_check: bool = False):
+    def create_async(self, yaml: str, is_check: bool = True):
         """
         This method creates yaml in async
         @param yaml:
@@ -699,7 +700,7 @@ class OC(SSH):
 
     @typechecked
     @logger_time_stamp
-    def apply_async(self, yaml: str, is_check: bool = False):
+    def apply_async(self, yaml: str, is_check: bool = True):
         """
         This method creates yaml in async
         @param yaml:
@@ -720,7 +721,7 @@ class OC(SSH):
         :return:
         """
         if os.path.isfile(yaml):
-            return self.run(f'{self._cli} delete -f {yaml} --wait=false')
+            return self.run(f'{self._cli} delete -f {yaml} --wait=false', is_check=False)
         else:
             raise YAMLNotExist(yaml)
 
@@ -752,7 +753,7 @@ class OC(SSH):
         :return:
         """
         namespace = f'-n {namespace}' if namespace else ''
-        result = self.run(f"{self._cli} get {namespace} pods -o jsonpath='{{.items[*].metadata.name}}'")
+        result = self.run(f"{self._cli} get {namespace} pods -o jsonpath='{{.items[*].metadata.name}}'", is_check=False)
         if pod_name in result:
             return True
         else:
@@ -767,7 +768,7 @@ class OC(SSH):
         :return:
         """
         namespace = f'-n {namespace}' if namespace else ''
-        result = self.run(f"{self._cli} get {namespace} pod -l={label_name} -o jsonpath='{{.items}}'")
+        result = self.run(f"{self._cli} get {namespace} pod -l={label_name} -o jsonpath='{{.items}}'", is_check=False)
         if result != '[]':
             return True
         else:
@@ -841,20 +842,17 @@ class OC(SSH):
         :return: pod name
         """
         if database:
-            return self.run(
-                f"{self._cli} get pods -n '{database}-db'" + " --no-headers | awk '{ print $1; }' | grep " + database,
-                is_check=True).rstrip().decode('ascii')
+            return self.run(f"{self._cli} get pods -n '{database}-db'" + " --no-headers | awk '{ print $1; }' | grep " + database,
+                is_check=True).rstrip()
         elif label_selector:
             namespace_opt = f'-n {namespace}' if namespace else ''
             result = self.run(
                 f"{self._cli} get pods {namespace_opt} -l '{label_selector}' -o jsonpath='{{.items[0].metadata.name}}'",
                 is_check=True)
-            if isinstance(result, bytes):
-                return result.decode('utf-8').strip().strip("'")
-            return str(result).strip().strip("'") if result else ''
+            return result.strip().strip("'") if result else ''
         else:
             namespace = f'-n {namespace}' if namespace else ''
-            return self.run(f"{self._cli} get pods {namespace} --no-headers | awk '{{ print $1; }}' | grep -w '{label}'", is_check=True).rstrip().decode('ascii')
+            return self.run(f"{self._cli} get pods {namespace} --no-headers | awk '{{ print $1; }}' | grep -w '{label}'", is_check=True).rstrip()
 
     @typechecked
     @logger_time_stamp
@@ -985,7 +983,7 @@ class OC(SSH):
         :param namespace:
         :return:
         """
-        self.run(f'{self._cli} delete ns {namespace}')
+        self.run(f'{self._cli} delete ns {namespace}', is_check=False)
 
     @typechecked
     @logger_time_stamp
@@ -1012,7 +1010,7 @@ class OC(SSH):
                 return self.run(
                     f"{self._cli} {namespace} wait --for=condition={status} pod -l {label} --timeout={timeout}s",
                     is_check=True)
-            if 'met' in result.decode("utf-8"):
+            if 'met' in result:
                 return True
         except Exception as err:
             if 'vm' in workload:
@@ -1070,7 +1068,7 @@ class OC(SSH):
         current_wait_time = 0
 
         while timeout <= 0 or current_wait_time <= timeout:
-            csv_names = self.run(f"{self._cli} get csv -n {namespace} -o jsonpath={{$.items[*].metadata.name}}")
+            csv_names = self.run(f"{self._cli} get csv -n {namespace} -o jsonpath={{$.items[*].metadata.name}}", is_check=False)
             if csv_names and len(csv_names.split()) >= csv_num:
                 return csv_names
 
@@ -1106,7 +1104,7 @@ class OC(SSH):
                 result = self.run(
                     f"{self._cli} {namespace} wait --for=condition={status} {run_type} -l {label} --timeout={timeout}s",
                     is_check=True)
-            if 'met' in result.decode("utf-8"):
+            if 'met' in result:
                 return True
         except Exception as err:
             if 'vm' in workload:
@@ -1165,7 +1163,7 @@ class OC(SSH):
         current_wait_time = 0
         namespace = f'-n {namespace}' if namespace else ''
         while timeout <= 0 or current_wait_time <= timeout:
-            answer = self.run(f'{self._cli} get pod {namespace} {pod_name} --no-headers -ocustom-columns=Status:status.phase 2>/dev/null')
+            answer = self.run(f'{self._cli} get pod {namespace} {pod_name} --no-headers -ocustom-columns=Status:status.phase 2>/dev/null', is_check=False)
             if answer == 'Running':
                 return
             elif answer == 'Error':
@@ -1195,25 +1193,29 @@ class OC(SSH):
             while current_wait_time <= timeout:
                 if label_uuid and job:
                     result = self.run(
-                        f"{self._cli} {namespace} wait --for=condition=complete -l {label}-{self.__get_short_uuid(workload=workload)} jobs --timeout={OC.SHORT_TIMEOUT}s")
+                        f"{self._cli} {namespace} wait --for=condition=complete -l {label}-{self.__get_short_uuid(workload=workload)} jobs --timeout={OC.SHORT_TIMEOUT}s",
+                        is_check=False)
                     if 'met' in result:
                         return True
                     result = self.run(
-                        f"{self._cli} {namespace} wait --for=condition=failed -l {label}-{self.__get_short_uuid(workload=workload)} jobs --timeout={OC.SLEEP_TIME}s")
+                        f"{self._cli} {namespace} wait --for=condition=failed -l {label}-{self.__get_short_uuid(workload=workload)} jobs --timeout={OC.SLEEP_TIME}s",
+                        is_check=False)
                     if 'met' in result:
                         return False
                 elif job:
                     # Handle job=True with label_uuid=False (direct pod workloads)
                     result = self.run(
-                        f"{self._cli} {namespace} wait --for=condition=complete -l {label} jobs --timeout={OC.SHORT_TIMEOUT}s")
+                        f"{self._cli} {namespace} wait --for=condition=complete -l {label} jobs --timeout={OC.SHORT_TIMEOUT}s",
+                        is_check=False)
                     if 'met' in result:
                         return True
                     result = self.run(
-                        f"{self._cli} {namespace} wait --for=condition=failed -l {label} jobs --timeout={OC.SLEEP_TIME}s")
+                        f"{self._cli} {namespace} wait --for=condition=failed -l {label} jobs --timeout={OC.SLEEP_TIME}s",
+                        is_check=False)
                     if 'met' in result:
                         return False
                 elif not job:
-                    result = self.run(f"{self._cli} get pod -l {label}" + " -n benchmark-runner --no-headers | awk '{ print $3; }'")
+                    result = self.run(f"{self._cli} get pod -l {label}" + " -n benchmark-runner --no-headers | awk '{ print $3; }'", is_check=False)
                     if 'Completed' in result:
                         return True
                 # sleep for x seconds
@@ -1276,7 +1278,7 @@ class OC(SSH):
         :return: True or False
         """
         namespace = f'-n {namespace}' if namespace else ''
-        result = self.run(f"{self._cli} get {namespace} vmi -o jsonpath='{{.items[*].metadata.name}}'")
+        result = self.run(f"{self._cli} get {namespace} vmi -o jsonpath='{{.items[*].metadata.name}}'", is_check=False)
         if vm_name in result:
             return True
         else:
@@ -1293,8 +1295,7 @@ class OC(SSH):
         """
         if label:
             namespace = f'-n {namespace}' if namespace else ''
-            return self.run(
-                cmd=f"{self._cli} get vmi {namespace} --no-headers | awk '{{ print $1; }}' | grep -w '{label}'", is_check=True).rstrip().decode('ascii')
+            return self.run(cmd=f"{self._cli} get vmi {namespace} --no-headers | awk '{{ print $1; }}' | grep -w '{label}'", is_check=True).rstrip()
         else:
             return self.run(f'{self._cli} get vmi', is_check=True)
 
@@ -1310,7 +1311,7 @@ class OC(SSH):
             else:
                 result = self.run(
                     cmd=f"{self._cli} get pod -n {namespace} {pod_name} -o jsonpath='{{.{field}}}'")
-            return result.strip().strip(b"'").decode('ascii') if isinstance(result, bytes) else str(result).strip().strip("'")
+            return result.strip().strip("'")
         except Exception:
             return ''
 
@@ -1328,7 +1329,7 @@ class OC(SSH):
             try:
                 result = self.run(
                     cmd=f"{self._cli} get vmi -n {namespace} {vm_name} -o jsonpath='{{.status.interfaces[0].ipAddress}}'")
-                ip = result.strip().strip(b"'").decode('ascii') if isinstance(result, bytes) else str(result).strip().strip("'")
+                ip = result.strip().strip("'")
                 if ip and ip != '<none>':
                     return ip
             except Exception:
@@ -1342,7 +1343,7 @@ class OC(SSH):
         """
         try:
             result = self.run(cmd=f"{self._cli} get infrastructure cluster -o jsonpath='{{.status.infrastructureName}}'")
-            return result.strip().strip(b"'").decode('ascii') if isinstance(result, bytes) else str(result).strip().strip("'")
+            return result.strip().strip("'")
         except Exception:
             return ''
 
@@ -1406,7 +1407,7 @@ class OC(SSH):
         namespace = f'-n {namespace}' if namespace else ''
         while timeout <= 0 or current_wait_time <= timeout:
             check_vm_status = f"{self._cli} get vm {vm_name} {namespace} -o jsonpath={{.status.printableStatus}}"
-            result = self.run(check_vm_status)
+            result = self.run(check_vm_status, is_check=False)
             if result == status.name:
                 return True
             # sleep for x seconds
@@ -1448,7 +1449,7 @@ class OC(SSH):
         if self.run(check_ssh_vm_cmd) == 'True':
             return 'True'
         else:
-            return self.run(ssh_vm_cmd)
+            return self.run(ssh_vm_cmd, is_check=False)
 
     def _build_virtctl_cmds(self, vm_name: str, namespace: str):
         """
@@ -1491,7 +1492,7 @@ class OC(SSH):
         virtctl_cmd, check_cmd = self._build_virtctl_cmds(vm_name, namespace)
         if 'True' in self.run(check_cmd):
             return True
-        return self.run(virtctl_cmd)
+        return self.run(virtctl_cmd, is_check=False)
 
     @logger_time_stamp
     def get_vm_node(self, vm_name: str, namespace: str = environment_variables.environment_variables_dict['namespace']):
@@ -1571,7 +1572,7 @@ class OC(SSH):
                 self.delete_async(yaml)
             else:
                 try:
-                    self.run(f"{self._cli} delete vm {vm_name} -n {namespace} --ignore-not-found")
+                    self.run(f"{self._cli} delete vm {vm_name} -n {namespace} --ignore-not-found", is_check=False)
                 except Exception:
                     pass
             return self.wait_for_vm_delete(vm_name=vm_name, namespace=namespace, timeout=timeout)
@@ -1585,7 +1586,7 @@ class OC(SSH):
         :return:
         """
         namespace = f'-n {namespace}' if namespace else ''
-        self.run(f"{self._cli} delete vm --all --grace-period 0 {namespace}")
+        self.run(f"{self._cli} delete vm --all --grace-period 0 {namespace}", is_check=False)
 
     @logger_time_stamp
     def wait_for_vm_completed(self, workload: str = '', vm_name: str = '',
@@ -1604,7 +1605,8 @@ class OC(SSH):
             # Check VMI phase for direct VM workloads
             if vm_name:
                 vmi_phase = self.run(
-                    f"{self._cli} {namespace} get vmi {vm_name} -o jsonpath={{.status.phase}}")
+                    f"{self._cli} {namespace} get vmi {vm_name} -o jsonpath={{.status.phase}}",
+                    is_check=False)
                 if vmi_phase == 'Succeeded':
                     return True
                 elif vmi_phase == 'Failed':
@@ -1612,7 +1614,8 @@ class OC(SSH):
             else:
                 # Fallback to benchmark CR for operator-based workloads
                 if self.run(
-                        f"{self._cli} {namespace} get benchmark {workload} -o jsonpath={{.status.complete}}") == 'true':
+                        f"{self._cli} {namespace} get benchmark {workload} -o jsonpath={{.status.complete}}",
+                        is_check=False) == 'true':
                     return True
             # sleep for x seconds
             time.sleep(OC.SLEEP_TIME)

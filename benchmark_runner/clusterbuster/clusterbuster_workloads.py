@@ -58,7 +58,7 @@ class ClusterBusterWorkloads(WorkloadsOperations):
         This method delete all resource that related to ClusterBuster resource
         :return:
         """
-        self.__ssh.run(cmd=f'oc delete pod -A -l {self.__namespace}')
+        self.__ssh.run(cmd=f'oc delete pod -A -l {self.__namespace}', is_check=False)
 
     def initialize_workload(self):
         """
