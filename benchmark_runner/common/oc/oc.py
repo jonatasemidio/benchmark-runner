@@ -843,18 +843,16 @@ class OC(SSH):
         if database:
             return self.run(
                 f"{self._cli} get pods -n '{database}-db'" + " --no-headers | awk '{ print $1; }' | grep " + database,
-                is_check=True).rstrip().decode('ascii')
+                is_check=True).rstrip()
         elif label_selector:
             namespace_opt = f'-n {namespace}' if namespace else ''
             result = self.run(
                 f"{self._cli} get pods {namespace_opt} -l '{label_selector}' -o jsonpath='{{.items[0].metadata.name}}'",
                 is_check=True)
-            if isinstance(result, bytes):
-                return result.decode('utf-8').strip().strip("'")
-            return str(result).strip().strip("'") if result else ''
+            return result.strip().strip("'") if result else ''
         else:
             namespace = f'-n {namespace}' if namespace else ''
-            return self.run(f"{self._cli} get pods {namespace} --no-headers | awk '{{ print $1; }}' | grep -w '{label}'", is_check=True).rstrip().decode('ascii')
+            return self.run(f"{self._cli} get pods {namespace} --no-headers | awk '{{ print $1; }}' | grep -w '{label}'", is_check=True).rstrip()
 
     @typechecked
     @logger_time_stamp
@@ -1012,7 +1010,7 @@ class OC(SSH):
                 return self.run(
                     f"{self._cli} {namespace} wait --for=condition={status} pod -l {label} --timeout={timeout}s",
                     is_check=True)
-            if 'met' in result.decode("utf-8"):
+            if 'met' in result:
                 return True
         except Exception as err:
             if 'vm' in workload:
@@ -1106,7 +1104,7 @@ class OC(SSH):
                 result = self.run(
                     f"{self._cli} {namespace} wait --for=condition={status} {run_type} -l {label} --timeout={timeout}s",
                     is_check=True)
-            if 'met' in result.decode("utf-8"):
+            if 'met' in result:
                 return True
         except Exception as err:
             if 'vm' in workload:
@@ -1294,7 +1292,7 @@ class OC(SSH):
         if label:
             namespace = f'-n {namespace}' if namespace else ''
             return self.run(
-                cmd=f"{self._cli} get vmi {namespace} --no-headers | awk '{{ print $1; }}' | grep -w '{label}'", is_check=True).rstrip().decode('ascii')
+                cmd=f"{self._cli} get vmi {namespace} --no-headers | awk '{{ print $1; }}' | grep -w '{label}'", is_check=True).rstrip()
         else:
             return self.run(f'{self._cli} get vmi', is_check=True)
 
@@ -1310,7 +1308,7 @@ class OC(SSH):
             else:
                 result = self.run(
                     cmd=f"{self._cli} get pod -n {namespace} {pod_name} -o jsonpath='{{.{field}}}'")
-            return result.strip().strip(b"'").decode('ascii') if isinstance(result, bytes) else str(result).strip().strip("'")
+            return result.strip().strip("'")
         except Exception:
             return ''
 
@@ -1328,7 +1326,7 @@ class OC(SSH):
             try:
                 result = self.run(
                     cmd=f"{self._cli} get vmi -n {namespace} {vm_name} -o jsonpath='{{.status.interfaces[0].ipAddress}}'")
-                ip = result.strip().strip(b"'").decode('ascii') if isinstance(result, bytes) else str(result).strip().strip("'")
+                ip = result.strip().strip("'")
                 if ip and ip != '<none>':
                     return ip
             except Exception:
@@ -1342,7 +1340,7 @@ class OC(SSH):
         """
         try:
             result = self.run(cmd=f"{self._cli} get infrastructure cluster -o jsonpath='{{.status.infrastructureName}}'")
-            return result.strip().strip(b"'").decode('ascii') if isinstance(result, bytes) else str(result).strip().strip("'")
+            return result.strip().strip("'")
         except Exception:
             return ''
 

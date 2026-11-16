@@ -115,7 +115,7 @@ def test_login_with_whitespace_password(mock_oc_instance, mock_sleep):
 
 
 @pytest.mark.parametrize('password', ['', '   '])
-@pytest.mark.parametrize('identity', ['kube:admin\n', b'system:admin\n'])
+@pytest.mark.parametrize('identity', ['kube:admin\n', 'system:admin\n'])
 def test_context_retry_succeeds_during_initialization(
         mock_oc_instance, mock_sleep, password, identity):
     '''Retry a failed KUBECONFIG check within one initialization.'''
@@ -134,10 +134,7 @@ def test_context_retry_succeeds_during_initialization(
 
 
 @pytest.mark.parametrize('password', [None, '', '   '])
-@pytest.mark.parametrize('identity', [
-    ' kube:admin\n', ' system:admin\n',
-    b' kube:admin\n', b' system:admin\n',
-])
+@pytest.mark.parametrize('identity', [' kube:admin\n', ' system:admin\n'])
 def test_oc_reuses_authenticated_context(password, identity):
     with patch.dict(
         'benchmark_runner.common.oc.oc.environment_variables.'
@@ -152,12 +149,12 @@ def test_oc_reuses_authenticated_context(password, identity):
 
 @pytest.mark.parametrize('password', ['', '   '])
 @pytest.mark.parametrize('identity', [
-    '', b'', '\n', b'\n', b'system:anonymous\n', 'system:anonymous\n',
-    'test-user\n', b'test-user\n', 'kubeadmin', b'admin',
-    'kube:admin-extra', b'system:admin-extra',
-    'prefix-kube:admin', b'prefix-system:admin',
-    'Kube:admin', b'System:admin',
-    'kube:admin\nother-user', b'system:admin\nother-user',
+    '', '\n', 'system:anonymous\n',
+    'test-user\n', 'kubeadmin', 'admin',
+    'kube:admin-extra', 'system:admin-extra',
+    'prefix-kube:admin', 'prefix-system:admin',
+    'Kube:admin', 'System:admin',
+    'kube:admin\nother-user', 'system:admin\nother-user',
 ])
 def test_oc_rejects_unauthenticated_context(password, identity, mock_sleep):
     '''Reject a non-admin KUBECONFIG identity without retrying.'''
@@ -168,9 +165,7 @@ def test_oc_rejects_unauthenticated_context(password, identity, mock_sleep):
         with pytest.raises(LoginFailed) as failure:
             OC(kubeadmin_password=password)
 
-    normalized = (
-        identity.decode('utf-8') if isinstance(identity, bytes) else identity
-    ).strip()
+    normalized = identity.strip()
     assert str(failure.value) == (
         f'Empty KUBEADMIN_PASSWORD and KUBECONFIG identity {normalized!r} '
         'is not `kube:admin` or `system:admin`.'
@@ -185,7 +180,6 @@ def test_oc_rejects_unauthenticated_context(password, identity, mock_sleep):
 
 @pytest.mark.parametrize('response', [
     Exception('Invalid kubeconfig'), RuntimeError('CLI failed'), None,
-    b'\xff\n',
 ])
 def test_oc_retries_failed_context_command(response, mock_sleep):
     '''Retry KUBECONFIG command errors while preserving the error cause.'''
@@ -205,8 +199,6 @@ def test_oc_retries_failed_context_command(response, mock_sleep):
 
     if response is None:
         assert isinstance(failure.value.__cause__, AttributeError)
-    elif isinstance(response, bytes):
-        assert isinstance(failure.value.__cause__, UnicodeDecodeError)
     else:
         assert failure.value.__cause__ is response
     assert SingletonOCLogin._instance is None
@@ -220,7 +212,7 @@ def test_oc_explicit_password_keeps_login_behavior():
     with patch.dict(
         'benchmark_runner.common.oc.oc.environment_variables.'
         'environment_variables_dict', {'cli': 'oc'},
-    ), patch.object(OC, 'run', return_value=b'Login successful') as run:
+    ), patch.object(OC, 'run', return_value='Login successful') as run:
         oc_instance = OC(kubeadmin_password='explicit-password')
 
     assert isinstance(oc_instance, OC)
@@ -254,7 +246,7 @@ def test_failed_context_is_revalidated(mock_oc_instance, mock_sleep):
     mock_oc_instance._kubeadmin_password = ''
     mock_oc_instance.run.side_effect = (
         [RuntimeError('Invalid kubeconfig')] * mock_oc_instance.RETRIES
-        + [b'system:admin\n']
+        + ['system:admin\n']
     )
     with pytest.raises(
         LoginFailed, match=('Empty KUBEADMIN_PASSWORD and '

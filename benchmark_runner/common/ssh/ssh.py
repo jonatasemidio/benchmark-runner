@@ -13,29 +13,47 @@ class SSH:
         self.__environment_variables_dict = environment_variables.environment_variables_dict
         self.timeout = int(self.__environment_variables_dict.get('timeout', 300))
 
-    def run(self, cmd: str, is_check: bool = False, background: bool = False):
+    def run(
+        self,
+        cmd: str,
+        is_check: bool = False,
+        background: bool = False,
+        universal_newlines: bool = True,
+        stderr=subprocess.STDOUT,
+    ):
         """
         This method run shell commands
+        :param cmd: command to execute
+        :param is_check: check command exit status
         :param background: run ssh in background
-        :param cmd:
-        :param is_check:run check command
-        :return:
+        :param universal_newlines: decode command output as text
+        :param stderr: stderr target passed to subprocess
+        :return: command output (str by default, bytes when universal_newlines=False, or Popen when background=True)
         """
         try:
             if background:
-                output = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            elif is_check:
-                output = subprocess.check_output(
+                return subprocess.Popen(
                     cmd,
-                    stderr=subprocess.STDOUT,
-                    shell=True, timeout=self.timeout,
-                    universal_newlines=False)
-            # execute cmd
-            else:
-                output = subprocess.getoutput(cmd)
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=stderr,
+                    universal_newlines=universal_newlines,
+                )
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=stderr,
+                shell=True,
+                timeout=self.timeout,
+                universal_newlines=universal_newlines,
+                check=is_check,
+            )
+            output = result.stdout
+            if isinstance(output, str) and output.endswith('\n'):
+                output = output[:-1]
             return output
         except subprocess.CalledProcessError as err:
             logger.error(f'subprocess Status : FAIL: {err.returncode} {err.output}')
             raise SSHSubprocessError()
         except Exception as err:
-             raise err
+            raise err
